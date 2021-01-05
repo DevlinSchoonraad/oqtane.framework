@@ -1,6 +1,5 @@
 ﻿@namespace Oqtane.Modules.Controls
-@inherits ModuleBase
-@attribute [OqtaneIgnore]
+@inherits ModuleControlBase
 
 <div class="row" style="margin-bottom: 50px;">
     <div class="col">
@@ -9,7 +8,7 @@
                 @if (_filemanagervisible)
                 {
                     <FileManager @ref="_fileManager" Filter="@Constants.ImageFiles" />
-                    @((MarkupString)_message)
+                    <ModuleMessage Message="@_message" Type="MessageType.Warning"></ModuleMessage>
                     <br />
                 }
                 <div class="row justify-content-center" style="margin-bottom: 20px;">
@@ -113,7 +112,7 @@
         new Resource { ResourceType = ResourceType.Script, Bundle = "Quill", Url = "js/quill-blot-formatter.min.js" },
         new Resource { ResourceType = ResourceType.Script, Bundle = "Quill", Url = "js/quill-interop.js" }
     };
-    
+
     protected override void OnInitialized()
     {
         _content = Content; // raw HTML
@@ -182,6 +181,7 @@
 
     public async Task InsertImage()
     {
+        _message = string.Empty;
         if (_filemanagervisible)
         {
             var fileid = _fileManager.GetFileId();
@@ -190,17 +190,15 @@
                 var interop = new RichTextEditorInterop(JSRuntime);
                 await interop.InsertImage(_editorElement, ContentUrl(fileid));
                 _filemanagervisible = false;
-                _message = string.Empty;
             }
             else
             {
-                _message = "<br /><div class=\"alert alert-warning\" role=\"alert\">You Must Select An Image To Insert</div>";
+                _message = "You Must Select An Image To Insert";
             }
         }
         else
         {
             _filemanagervisible = true;
-            _message = string.Empty;
         }
         StateHasChanged();
     }

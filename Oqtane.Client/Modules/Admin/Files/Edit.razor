@@ -1,6 +1,7 @@
 ﻿@namespace Oqtane.Modules.Admin.Files
 @inherits ModuleBase
 @inject IFolderService FolderService
+@inject IFileService FileService
 @inject NavigationManager NavigationManager
 
 @if (_folders != null)
@@ -45,7 +46,7 @@
     <NavLink class="btn btn-secondary" href="@NavigateUrl()">Cancel</NavLink>
     @if (!_isSystem && PageState.QueryString.ContainsKey("id"))
     {
-        <button type="button" class="btn btn-danger" @onclick="DeleteFolder">Delete</button>
+        <ActionDialog Header="Delete Folder" Message="@("Are You Sure You Wish To Delete This Folder?")" Action="Delete" Security="SecurityAccessLevel.Admin" Class="btn btn-danger" OnClick="@(async () => await DeleteFolder())" />
     }
     <br />
     <br />
@@ -123,7 +124,7 @@
             AddModuleMessage("Folder Name Not Valid.", MessageType.Warning);
             return;
         }
-        
+
         try
         {
             Folder folder;
@@ -174,7 +175,7 @@
         catch (Exception ex)
         {
             await logger.LogError(ex, "Error Saving Folder {FolderId} {Error}", _folderId, ex.Message);
-            AddModuleMessage("Error Saving Module", MessageType.Error);
+            AddModuleMessage("Error Saving Folder", MessageType.Error);
         }
     }
 
@@ -182,9 +183,33 @@
     {
         try
         {
-            await FolderService.DeleteFolderAsync(_folderId);
-            await logger.LogInformation("Folder Deleted {Folder}", _folderId);
-            AddModuleMessage("Folder Deleted", MessageType.Success);
+            bool isparent = false;
+            foreach (Folder folder in _folders)
+            {
+                if (folder.ParentId == _folderId)
+                {
+                    isparent = true;
+                    break;
+                }
+            }
+            if (!isparent)
+            {
+                var files = await FileService.GetFilesAsync(_folderId);
+                if (files.Count == 0)
+                {
+                    await FolderService.DeleteFolderAsync(_folderId);
+                    await logger.LogInformation("Folder Deleted {Folder}", _folderId);
+                    NavigationManager.NavigateTo(NavigateUrl());
+                }
+                else
+                {
+                    AddModuleMessage("Folder Has Files And Cannot Be Deleted", MessageType.Warning);
+                }
+            }
+            else
+            {
+                AddModuleMessage("Folder Has Subfolders And Cannot Be Deleted", MessageType.Warning);
+            }
         }
         catch (Exception ex)
         {
